@@ -1,0 +1,23 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+    - containerPort: 30020
+      protocol: TCP
+      hostPort: 27020
+    - containerPort: 30021
+      protocol: UDP
+      hostPort: 27020
+    - containerPort: 30005
+      protocol: TCP
+      hostPort: 27005
+    - containerPort: 30006
+      protocol: UDP
+      hostPort: 27005
+    - containerPort: 30015
+      protocol: TCP
+      hostPort: 27015
+    - containerPort: 30016
+      protocol: UDP
+      hostPort: 27015

@@ -1,0 +1,154 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: garrys-mod
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: users
+  namespace: garrys-mod
+data:
+  users.txt: |
+    "Users"
+    {
+        //
+        // This is your users file
+        //
+        // You can use this file to add people as admins on your server
+        // Add them to the relevant section
+        //
+        // If you're a Lua coder you can add your own sections and use them
+        // in your script by doing pl:IsUserGroup( "admin" ) etc
+        //
+
+        "superadmin"
+        {
+              "ludw1g"                       "STEAM_0:1:45093741"
+        }
+    }
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cache
+  namespace: garrys-mod
+  labels:
+    app: cache
+spec:
+  #storageClassName: rook-ceph-block
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: garrys-mod
+  namespace: garrys-mod
+spec:
+  selector:
+    matchLabels:
+      name: garrys-mod
+  template:
+    metadata:
+      labels:
+        name: garrys-mod
+    spec:
+      securityContext:
+        runAsGroup: 1000
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - image: quay.io/hown3d/gmod-srv:v0.4.0
+          name: gameserver
+          tty: true
+          env:
+            - name: TERM
+              value: xterm
+            - name: RCON_PASS
+              value: epicpass
+            - name: SERVER_PASS
+              value: omegalulPassword
+            - name: SRCDS_WORKSHOP_COLLECTION
+              value: "893359546"
+          ports:
+           - containerPort: 27015
+             protocol: TCP
+             name: gmod-srv-tcp
+           - containerPort: 27015
+             protocol: UDP
+             name: gmod-srv
+           - containerPort: 27005
+             protocol: TCP
+             name: gmod-client-tcp
+           - containerPort: 27005
+             protocol: UDP
+             name: gmod-client
+           - containerPort: 27020
+             protocol: UDP
+             name: gmod-steam
+           - containerPort: 27020
+             protocol: TCP
+             name: gmod-steam-tcp
+          volumeMounts:
+            - name: cache
+              mountPath: /gmod/steam_cache
+              subPath: steam_cache
+            - name: cache
+              mountPath: /gmod/garrysmod/cache/srcds
+              subPath: gmod_cache
+            - name: users
+              mountPath: /gmod/garrysmod/settings
+      volumes:
+        - name: cache
+          persistentVolumeClaim:
+            claimName: cache
+        - name: users
+          configMap:
+            name: users
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: garrys-mod
+  namespace: garrys-mod
+spec:
+  selector:
+    name: garrys-mod
+  type: NodePort
+  ports:
+    - port: 27015
+      protocol: TCP
+      targetPort: gmod-srv-tcp
+      name: gmod-srv-tcp
+      nodePort: 30015
+    - port: 27015
+      protocol: UDP
+      targetPort: gmod-srv
+      name: gmod-srv-udp
+      nodePort: 30016
+    - port: 27005
+      protocol: TCP
+      targetPort: gmod-client-tcp
+      name: gmod-client-tcp
+      nodePort: 30005
+    - port: 27005
+      protocol: UDP
+      targetPort: gmod-client
+      name: gmod-client-udp
+      nodePort: 30006
+    - port: 27020
+      protocol: TCP
+      targetPort: gmod-steam-tcp
+      name: gmod-steam-tcp
+      nodePort: 30020
+    - port: 27020
+      protocol: UDP
+      targetPort: gmod-steam
+      nodePort: 30021
+      name: gmod-steam-udp
